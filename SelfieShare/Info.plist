@@ -55,6 +55,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Allow Multipeer Connectivity to share selfies</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_atina-sfshare._tcp</string>
+		<string>_atina-sfshare._udp</string>
+	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
