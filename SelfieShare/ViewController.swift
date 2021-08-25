@@ -16,6 +16,11 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
     var peerID = MCPeerID(displayName: UIDevice.current.name)
     var session: MCSession?
     var advertiserAssistent: MCNearbyServiceAdvertiser?
+    var sentMessage = "" {
+        didSet {
+            print("Sent message: \(sentMessage)")
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -49,16 +54,29 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
     }
     
     @objc func addConnectionPrompt() {
-        let ac = UIAlertController(title: "Add Connection", message: nil, preferredStyle: .alert)
+        let ac = UIAlertController(title: "Add Connection", message: nil, preferredStyle: .actionSheet)
         let hostASession = UIAlertAction(title: "Host a session", style: .default, handler: startHosting)
         let joinASession = UIAlertAction(title: "Join a session", style: .default, handler: joinSession)
+        let listConnections = UIAlertAction(title: "List connections", style: .default, handler: listConnections)
         let cancel = UIAlertAction(title: "Cancel", style: .cancel)
         
         ac.addAction(hostASession)
         ac.addAction(joinASession)
+        ac.addAction(listConnections)
         ac.addAction(cancel)
         
         present(ac, animated: true)
+    }
+    
+    func listConnections(_ action: UIAlertAction) {
+        guard let session = session else { return }
+        var listOfPeers = ""
+        let connectedPeers = session.connectedPeers
+        for peer in connectedPeers {
+            listOfPeers += peer.displayName + "\n"
+        }
+        listOfPeers = listOfPeers.trimmingCharacters(in: .whitespacesAndNewlines)
+        showAlert(title: "List of connections", message: listOfPeers)
     }
     
     func startHosting(_ action: UIAlertAction) {
@@ -127,6 +145,9 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
         case .connecting:
             print("Connecting: \(peerID.displayName)")
         case .notConnected:
+            DispatchQueue.main.async { [weak self] in
+                self?.showError(title: "Peer Disconnected", message: "\(peerID.displayName) has dropped connection")
+            }
             print("Disconnected: \(peerID.displayName)")
         @unknown default:
             print("Unknown Found: \(peerID.displayName)")
@@ -138,6 +159,8 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
             if let image = UIImage(data: data) {
                 self?.images.insert(image, at: 0)
                 self?.collectionView.reloadData()
+            } else if let text = String(data: data, encoding: .utf8) {
+                self?.sentMessage = text
             }
         }
     }
@@ -149,6 +172,10 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
             if let imageData = image.pngData() {
                 do {
                     try session.send(imageData, toPeers: session.connectedPeers, with: .reliable)
+                    if let msg = "Sent from \(peerID.displayName)".data(using: .utf8) {
+                        try session.send(msg, toPeers: session.connectedPeers, with: .reliable)
+                    }
+                    
                 } catch {
                     showError(title: "Send Error", message: error.localizedDescription)
                 }
@@ -171,10 +198,14 @@ class ViewController: UICollectionViewController, UINavigationControllerDelegate
         present(ac, animated: true)
     }
     
-    func showError(title: String, message: String? = nil) {
+    func showAlert(title: String, message: String? = nil) {
         let ac = UIAlertController(title: title, message: message, preferredStyle: .alert)
         ac.addAction(UIAlertAction(title: "OK", style: .default))
         present(ac, animated: true)
+    }
+    
+    func showError(title: String, message: String? = nil) {
+        showAlert(title: "🚨 " + title, message: message)
     }
     
 }
